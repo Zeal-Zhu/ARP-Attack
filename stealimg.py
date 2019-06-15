@@ -9,12 +9,11 @@ import sys
 
 urllist = []
 
-
 def main():
     usage = "Usage: [-i interface]"
     parser = OptionParser(usage)
     parser.add_option('-i', dest='interface',
-                      help='select interface(input eth0 or wlan0 or more)')
+                      help='specify interface(input eth0, en0 wlan0 or more)')
     (options, args) = parser.parse_args()
     if options.interface:
         interface = options.interface
@@ -35,7 +34,6 @@ def getimg(pdata):
             if p.data.data.dport == 80:
                 pa = re.compile(r'GET (.*?\.jpg)')  # |.*?\.png|.*?\.gif
                 img = re.findall(pa, p.data.data.data)
-                print pa
                 if img != []:
                     lines = p.data.data.data.split('\n')
                     for line in lines:
@@ -46,14 +44,18 @@ def getimg(pdata):
                                 if 'Referer:' in p.data.data.data:
                                     for line in lines:
                                         if 'Referer:' in line:
-                                            referer = line.split(
-                                                ':')[-1].strip()
-                                            print url
-                                            r = requests.get(
-                                                url, headers={'Referer': referer})
-                                            img = Image.open(
-                                                BytesIO(r.content))
-                                            img.show()
+                                            referer = "http:" + \
+                                                line.split(':')[-1].strip()
+                                            print "url: "+url
+                                            try:
+                                                r = requests.get(
+                                                    url, headers={'Referer': referer})
+                                                img = Image.open(BytesIO(r.content))
+                                                img.show()
+                                            except IOError as e:
+                                                print e
+                                                pass
+                                            
                                 else:
                                     r = requests.get(url)
                                     img = Image.open(BytesIO(r.content))

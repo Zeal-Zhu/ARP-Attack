@@ -10,11 +10,11 @@ def main():
     parser = OptionParser(usage)
     # -i 所选择的网卡，eth0或wlan0，存放在interface变量中
     parser.add_option('-i', dest='interface',
-                      help='select interface(input eth0 or wlan0 or more)')
+                      help='specify interface(input eth0, en0, wlan0 or more)')
     # -t 要攻击的ip，存放在targetip变量中
-    parser.add_option('-t', dest='targetip', help='select ip to spoof')
+    parser.add_option('-t', dest='targetip', help='specify ip to spoof')
     # -g 网关ip，存放在gatewayip变量中
-    parser.add_option('-g', dest='gatewayip', help='input gateway ip')
+    parser.add_option('-g', dest='gatewayip', help='specify gateway ip')
     (options, args) = parser.parse_args()
     if options.interface and options.targetip and options.gatewayip:
         interface = options.interface
