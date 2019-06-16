@@ -11,11 +11,11 @@ import logging
 import os
 import json
 import datetime as dt
+import netifaces
 # import celery # 异步工具
 
 imgurllist = []
 urllist = []
-logfile = "log/record.log"
 jsonfile = "log/url.json"
 
 
@@ -36,6 +36,22 @@ def main():
             # get_response(pdata)
     else:
         parser.print_help()
+        sys.exit(0)
+
+
+def recording(interface):
+    print "*"*30
+    if netifaces.AF_INET in netifaces.ifaddresses(interface):
+        logging.info("recrding using interface "+interface)
+        pc = pcap.pcap(interface)
+        pc.setfilter('tcp port 80')
+        # pc.setfilter('dst host 192.168.199.244 or src host 192.168.199.244')
+        # pc.setfilter('src host 192.168.199.244')
+        for ptime, pdata in pc:
+            get_request_url(pdata)
+            # get_response(pdata)
+    else:
+        logging.error("interface not found, recording will terminiate...")
         sys.exit(0)
 
 
@@ -69,7 +85,7 @@ def get_request_url(pdata):
     if len(tcpdata.data) > 0 and ipdata.__class__.__name__ == 'IP' and tcpdata.__class__.__name__ == 'TCP' and tcpdata.dport == 80:
         # pa = re.compile(r'GET (.*?)') pa=re.compile(r'GET (.*?\.jpg)')  # |.*?\.png|.*?\.gif
         # url = re.findall(pa, tcpdata.data)
-        # logging.info("in loop...")
+        logging.info("capture HTTP request by port 80 tcp")
         try:
             httprequest = dpkt.http.Request(tcpdata.data)
             if isinstance(tcpdata, dpkt.tcp.TCP) and httprequest.method == 'GET':  # tcp data packet
@@ -131,12 +147,6 @@ def format_url_to_json(url):
     return {str(dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")): url}
 
 if __name__ == '__main__':
-    logging.basicConfig(filename=logfile,
-                        filemode='a',
-                        format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                        datefmt='%H:%M:%S',
-                        level=logging.DEBUG)
     logging.info("start recording...")
-
     # self.logger = logging.getLogger('urbanGUI')
     main()
