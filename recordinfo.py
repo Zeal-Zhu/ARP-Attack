@@ -28,15 +28,14 @@ def main():
         # pc.setfilter('dst host 192.168.199.244 or src host 192.168.199.244')
         # pc.setfilter('src host 192.168.199.244')
         for ptime, pdata in pc:
-            # getimg(pdata)
-            getinfo(pdata)
-            # getresponse(pdata)
+            get_request_url(pdata)
+            # get_response(pdata)
     else:
         parser.print_help()
         sys.exit(0)
 
 
-def getresponse(pdata):
+def get_response(pdata):
     p = dpkt.ethernet.Ethernet(pdata)
     ipdata = p.data
     tcpdata = p.data.data
@@ -59,13 +58,13 @@ def getresponse(pdata):
             pass
 
 
-def getinfo(pdata):
+def get_request_url(pdata):
     global urllist
     p = dpkt.ethernet.Ethernet(pdata)
     ipdata = p.data
     tcpdata = p.data.data
     if len(tcpdata.data) > 0 and ipdata.__class__.__name__ == 'IP' and tcpdata.__class__.__name__ == 'TCP' and tcpdata.dport == 80:
-        # pa = re.compile(r'GET (.*?)')
+        # pa = re.compile(r'GET (.*?)') pa=re.compile(r'GET (.*?\.jpg)')  # |.*?\.png|.*?\.gif
         # url = re.findall(pa, tcpdata.data)
         # logging.info("in loop...")
         try:
@@ -87,43 +86,6 @@ def getinfo(pdata):
             # logging.warning(e)
             pass
 
-
-def getimg(pdata):
-    global imgurllist
-    p=dpkt.ethernet.Ethernet(pdata)
-    if p.data.__class__.__name__ == 'IP' and p.data.data.__class__.__name__ == 'TCP' and p.data.data.dport == 80:
-        logging.info("get url: "+p.data.data.data)
-        pa=re.compile(r'GET (.*?\.jpg)')  # |.*?\.png|.*?\.gif
-        img=re.findall(pa, p.data.data.data)
-        if img != []:
-            lines=p.data.data.data.split('\n')
-            for line in lines:
-                if 'Host:' in line:
-                    url='http://'+line.split(':')[-1].strip()+img[-1]
-                    if url not in imgurllist:
-                        imgurllist.append(url)
-                        if 'Referer:' in p.data.data.data:
-                            for line in lines:
-                                if 'Referer:' in line:
-                                    referer="http:" + \
-                                        line.split(':')[-1].strip()
-                                    logging.info("img url: "+url)
-                                    print "url: "+url
-                                    try:
-                                        r=requests.get(
-                                            url, headers={'Referer': referer})
-                                        img=Image.open(BytesIO(r.content))
-                                        img.show()
-                                    except IOError as e:
-                                        print e
-                                        pass
-
-                        else:
-                            r=requests.get(url)
-                            img=Image.open(BytesIO(r.content))
-                            img.show()
-                    else:
-                        pass
 
 
 def debug():
