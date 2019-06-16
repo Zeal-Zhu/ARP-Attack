@@ -8,11 +8,15 @@ from io import BytesIO
 from optparse import OptionParser
 import sys
 import logging
+import os
+import json
+import datetime as dt
 # import celery # 异步工具
 
 imgurllist = []
 urllist = []
-logname = "log/record.log"
+logfile = "log/record.log"
+jsonfile = "log/url.json"
 
 
 def main():
@@ -57,7 +61,6 @@ def get_response(pdata):
             logging.warning(e)
             pass
 
-
 def get_request_url(pdata):
     global urllist
     p = dpkt.ethernet.Ethernet(pdata)
@@ -79,27 +82,56 @@ def get_request_url(pdata):
                     fullurl = 'http://' + \
                         httprequest.headers['host'] + httprequest.uri
 
-                if fullurl not in urllist:
+                if fullurl not in urllist and check_valid_url(fullurl) != "None":
                     urllist.append(fullurl)
                     logging.info("http get full url of %d : %s" % (len(urllist), fullurl))
+                    print fullurl
+                    save_to_json(fullurl)
         except (dpkt.dpkt.NeedData, dpkt.dpkt.UnpackError) as e:
-            # logging.warning(e)
-            pass
+            logging.error(e)
 
+def check_valid_url(url):
+    # check if url correct or reachable
+    regex = re.compile(
+        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
+    validurllist = re.findall(regex, url)
+    # save to json
+    if len(validurllist) > 0:
+        return validurllist[0]
+    else:
+        return "None"
 
+def save_to_json(url):
+    url = format_url_to_json(url)
+    print url
+    try:
+        if os.path.exists(jsonfile):
+            # file exists
+            print "*"*20
+            if os.path.getsize(jsonfile) > 0:
+                with open(jsonfile, 'r') as file :
+                    oldcontent = json.loads(file.readline())
+                    url.update(oldcontent)
+                
+                with open(jsonfile, 'w') as file:
+                    json.dump(url, file)
+            else:
+                with open(jsonfile, 'w') as file:
+                    json.dump(url, file)
+        else:
+            # file not exists
+            # create a file
+            with open(jsonfile, 'w') as file:
+                file.write("")
+    except IOError as e:
+        logging.error(e)
 
-def debug():
-    pc=pcap.pcap('en0')
-    # pc.setfilter('tcp port 80')
-    # pc.setfilter('dst host 192.168.199.244 or src host 192.168.199.244')
-    pc.setfilter('src host 192.168.199.244')
-    for ptime, pdata in pc:
-        # getimg(pdata)
-        getinfo(pdata)
-
+def format_url_to_json(url):
+    # return clipboard value and time
+    return {str(dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")): url}
 
 if __name__ == '__main__':
-    logging.basicConfig(filename=logname,
+    logging.basicConfig(filename=logfile,
                         filemode='a',
                         format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
                         datefmt='%H:%M:%S',
@@ -108,4 +140,3 @@ if __name__ == '__main__':
 
     # self.logger = logging.getLogger('urbanGUI')
     main()
-    # debug()
